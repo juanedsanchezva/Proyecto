@@ -3,8 +3,9 @@ import math
 import sys
 import os
 from matriz_nivel_alpha import boards_nivelA
-from movimiento_alpha import inicializar_movimiento, mover_personaje, dibujar_personaje
-
+from movimiento_alpha import inicializar_movimiento, mover_personaje, dibujar_personaje, obtener_puntaje
+from enemigo_alpha import inicializar_enemigo, mover_enemigo, dibujar_enemigo, get_enemigo_pos
+from movimiento_alpha import get_player_pos
 
 
 pygame.init()
@@ -23,6 +24,14 @@ PI = math.pi
 # Botón de pausa
 boton_pausa = pygame.Rect(Ventana_Ancho - 90, 10, 80, 30)
 
+
+moneda_pequeña = pygame.image.load(r"C:\Users\eduar\OneDrive\Documents\EscapaDeLaUNAL-main\Assets1\MonedaP_test.png").convert_alpha()
+moneda_grande = pygame.image.load(r"C:\Users\eduar\OneDrive\Documents\EscapaDeLaUNAL-main\Assets1\Moneda_test.png").convert_alpha()
+
+# Escalarlas al tamaño deseado
+moneda_pequeña = pygame.transform.scale(moneda_pequeña, (12, 12))  # ajusta el tamaño
+moneda_grande = pygame.transform.scale(moneda_grande, (20, 20))
+
 def draw_board(lvl):
     num1 = ((Ventana_Altura - 50) // 32)
     num2 = (Ventana_Ancho // 30)
@@ -33,9 +42,9 @@ def draw_board(lvl):
             cy = i * num1 + (0.5 * num1)
 
             if valor == 1:
-                pygame.draw.circle(Display_Surface, "gold1", (cx, cy), 2)
+                 Display_Surface.blit(moneda_pequeña, (cx - 6, cy - 6))  # centrar imagen pequeña
             elif valor == 2:
-                pygame.draw.circle(Display_Surface, "gold1", (cx, cy), 6)
+                 Display_Surface.blit(moneda_grande, (cx - 10, cy - 10))  # centrar imagen grande
             elif valor == 3:
                 pygame.draw.line(Display_Surface, colorTEST, (cx, i * num1), (cx, i * num1 + num1), 3)
             elif valor == 4:
@@ -104,14 +113,30 @@ def mostrar_pausa():
 
 inicializar_movimiento(boards_nivelA, Ventana_Ancho, Ventana_Altura)
 
+inicializar_enemigo(boards_nivelA, Ventana_Ancho, Ventana_Altura, pos_inicial=(19, 14))
 
 def main():
     corriendo = True
+    frames_enemigo = 0  # ← define el contador del enemigo aquí
     while corriendo:
         reloj.tick(fps)
         Display_Surface.fill((4, 17, 4))
         draw_board(level)
         dibujar_personaje(Display_Surface)
+        dibujar_enemigo(Display_Surface)
+
+        frames_enemigo += 1
+        if frames_enemigo >= 8:
+         mover_enemigo(get_player_pos())
+         frames_enemigo = 0
+       
+        if get_enemigo_pos() == get_player_pos():
+         print("¡El enemigo atrapó al búho!")
+         corriendo = False
+
+        # Mostrar puntaje
+        puntaje = font.render(f"Monedas: {obtener_puntaje()}", True, (255, 255, 255))
+        Display_Surface.blit(puntaje, (20, 10))
         
 
         # Botón de pausa visible

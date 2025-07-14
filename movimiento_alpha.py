@@ -2,28 +2,35 @@
 import pygame
 import random
 import os
-import time
 
-CAMINABLES = [1, 2]
+CAMINABLES = [0, 1, 2]
 
 player_pos = [0, 0]
 TILE_WIDTH = TILE_HEIGHT = 32
 buho_img = None
 board = []
 
-estela = []  # Lista de (fila, columna, tiempo_de_creacion)
-VIDA_ESTELA_MS = 400  # tiempo de vida en milisegundos (0.4 segundos aprox)
+estela = []  # (fila, columna, timestamp)
+VIDA_ESTELA_MS = 400
+monedas_recogidas = 0  # contador de monedas
 
-def inicializar_movimiento(tablero, ancho, alto, ruta_imagen_buho="INTERFAZ GRAFICA/Buho test.png"):
-    global player_pos, TILE_WIDTH, TILE_HEIGHT, buho_img, board, estela
+def get_player_pos():
+    return tuple(player_pos)
+
+def inicializar_movimiento(tablero, ancho, alto, ruta_imagen_buho="INTERFAZ GRAFICA/Buho test.png", pos_inicial=(30,15)):
+    global player_pos, TILE_WIDTH, TILE_HEIGHT, buho_img, board, estela, monedas_recogidas
     board = tablero
-    estela = []  # Limpiar rastro
+    estela = []
+    monedas_recogidas = 0
 
     TILE_HEIGHT = (alto - 50) // 32
     TILE_WIDTH = ancho // 30
 
-    posiciones_validas = [(i, j) for i in range(len(board)) for j in range(len(board[0])) if board[i][j] in CAMINABLES]
-    player_pos = list(random.choice(posiciones_validas))
+    if pos_inicial:
+     player_pos = list(pos_inicial)
+    else:
+      posiciones_validas = [(i, j) for i in range(len(board)) for j in range(len(board[0])) if board[i][j] in CAMINABLES]
+      player_pos = list(random.choice(posiciones_validas))
 
     try:
         buho_img_original = pygame.image.load(ruta_imagen_buho)
@@ -33,7 +40,7 @@ def inicializar_movimiento(tablero, ancho, alto, ruta_imagen_buho="INTERFAZ GRAF
         buho_img = None
 
 def mover_personaje(direccion):
-    global player_pos
+    global player_pos, monedas_recogidas
     dx, dy = 0, 0
     if direccion == 'w': dx = -1       # ↑ arriba
     elif direccion == 's': dx = 1      # ↓ abajo
@@ -49,9 +56,13 @@ def mover_personaje(direccion):
             0 <= nueva_y < len(board[0]) and
             board[nueva_x][nueva_y] in CAMINABLES
         ):
-            # Guardar la posición y el tiempo
             estela.append((player_pos[0], player_pos[1], pygame.time.get_ticks()))
             player_pos[0], player_pos[1] = nueva_x, nueva_y
+
+            if board[nueva_x][nueva_y] in (1, 2):
+                monedas_recogidas += 1
+                board[nueva_x][nueva_y] = 0  # eliminar la moneda
+
         else:
             break
 
@@ -62,24 +73,23 @@ def dibujar_personaje(superficie):
     for fila, col, creado_en in estela:
         tiempo_transcurrido = tiempo_actual - creado_en
         if tiempo_transcurrido < VIDA_ESTELA_MS:
-            # Calcular opacidad: más reciente = más visible
             alpha = int(255 * (1 - (tiempo_transcurrido / VIDA_ESTELA_MS)))
             sombra = pygame.Surface((TILE_WIDTH, TILE_HEIGHT), pygame.SRCALPHA)
-            sombra.fill((255, 255, 0, alpha))  # amarillo transparente
+            sombra.fill((255, 255, 0, alpha))
             x = col * TILE_WIDTH
             y = fila * TILE_HEIGHT
             superficie.blit(sombra, (x, y))
-            estela_viva.append((fila, col, creado_en))  # conservar
-        # si ya expiró, no lo añadimos a la nueva lista
+            estela_viva.append((fila, col, creado_en))
 
-    # Actualizar estela eliminando los pasos viejos
     estela.clear()
     estela.extend(estela_viva)
 
-    # Dibujar al personaje
     x = player_pos[1] * TILE_WIDTH
     y = player_pos[0] * TILE_HEIGHT
     if buho_img:
         superficie.blit(buho_img, (x, y))
     else:
         pygame.draw.rect(superficie, (255, 0, 0), (x, y, TILE_WIDTH, TILE_HEIGHT))
+
+def obtener_puntaje():
+    return monedas_recogidas
